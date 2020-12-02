@@ -1,14 +1,15 @@
 jpsType: install
 jpsVersion: '1.5.2'
 name: Ansible Managed Cluster
-id: ansible-server
+id: ansible-managed-cluster
 baseUrl: https://raw.githubusercontent.com/jelastic-jps/ansible-managed-cluster/main
+logo: /images/logo.png
 
 categories:
   - apps/popular
   
 description: 
-  text: text: /text/description.md
+  text:  /text/description.md
   short: Ansible Managed Cluster
 
 settings:
@@ -60,6 +61,7 @@ actions:
   installAnsible:
       - cmd[cp]: |-
           pip install ansible
+          ln -s $(ls /opt/jelastic-python*/bin/ansible-playbook | tail -n1) /usr/bin/ansible-playbook
           echo -e "[defaults]\nhost_key_checking = False" >  ~/.ansible.cfg
 
   generateKeysOnMaster:
