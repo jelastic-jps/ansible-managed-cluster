@@ -1,0 +1,91 @@
+jpsType: install
+jpsVersion: '1.5.2'
+name: Ansible Managed Cluster
+id: ansible-server
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/ansible-managed-cluster/main
+
+categories:
+  - apps/popular
+  
+description: 
+  text: text: /text/description.md
+  short: Ansible Managed Cluster
+
+settings:
+  fields:
+    - name: distro
+      type: list
+      caption: Linux Distribution
+      values:
+        centos7: CentOS7
+        ubuntu: Ubuntu
+      default: CentOS7
+      hideLabel: false
+      editable: false
+      
+    - name: size
+      type: spinner
+      caption: Managed Cluster Size 
+      min: 1
+      max: 30
+      default: 1
+  
+nodes:
+  - nodeType: "apache-python"
+    nodeGroup: cp
+    count: 1
+    cloudlets: 16
+    isRedeploySupport: false
+  
+  - nodeType: "centos7"
+    nodeGroup: vps
+    count: ${settings.size}
+    cloudlets: 16
+    isRedeploySupport: false
+
+onInstall: 
+  - installAnsible
+  - generateKeysOnMaster
+  - generateKeysOnWorkers
+  - readPublicKeyFromMaster
+  - set:
+      key: ${response.body}
+  - forEach(nodes.vps):
+      - initSlave:
+          publicKey: ${this.key}
+          slaveNodeId: ${@i.id}
+          slaveNodeIp: ${@i.intIP}
+
+actions:
+  installAnsible:
+      - cmd[cp]: |-
+          pip install ansible
+          echo -e "[defaults]\nhost_key_checking = False" >  ~/.ansible.cfg
+
+  generateKeysOnMaster:
+      - cmd[cp]: |-
+          yes "y" | ssh-keygen -t rsa -q -f "/var/www/webroot/.ssh/id_rsa" -N ""
+          echo
+        
+  generateKeysOnWorkers:
+      - cmd[vps]: |-
+          yes "y" | ssh-keygen -t rsa -q -f "/root/.ssh/id_rsa" -N ""
+          echo
+        user: root
+
+  readPublicKeyFromMaster:
+    api: env.file.Read
+    path: /var/www/webroot/.ssh/id_rsa.pub
+    nodeid: ${nodes.cp.master.id}
+
+  initSlave:
+    - cmd[${this.slaveNodeId}]: |-
+        echo "${this.publicKey}" >> /root/.ssh/authorized_keys;
+        cat /etc/ssh/ssh_host_rsa_key.pub
+    - cmd[${nodes.cp.master.id}]: |-
+        ssh-keygen -R ${this.slaveNodeIp}
+        echo ${this.slaveNodeIp} ${response.out} >> ~/.ssh/known_hosts
+        echo "node${this.slaveNodeId}-${env.domain}" >> /var/www/webroot/ansible-hosts
+
+
+success: Your Ansible Managed Cluster is ready. Enjoy all the power of Ansible Engine in Jelastic.
