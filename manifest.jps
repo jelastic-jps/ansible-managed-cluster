@@ -19,7 +19,7 @@ settings:
       caption: Linux Distribution
       values:
         centos7: CentOS7
-        ubuntu: Ubuntu
+        ubuntu-vps: Ubuntu
       default: CentOS7
       hideLabel: false
       editable: false
@@ -38,7 +38,7 @@ nodes:
     cloudlets: 16
     isRedeploySupport: false
   
-  - nodeType: "centos7"
+  - nodeType: ${settings.distro}
     nodeGroup: vps
     count: ${settings.size}
     cloudlets: 16
